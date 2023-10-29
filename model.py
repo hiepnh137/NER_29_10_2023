@@ -69,7 +69,7 @@ class NERClassifier(nn.Module):
         )
 
         self.transformer_encoder = TransformerEncoder(
-            TransformerEncoderLayer(transformer_embedding_dim, attention_heads, ff_dim, dropout, batch_first=True),
+            TransformerEncoderLayer(transformer_embedding_dim, attention_heads, ff_dim, dropout),
             num_of_transformer_layers,
         )
         self.classifier = nn.Linear(transformer_embedding_dim, num_classes)
@@ -83,16 +83,19 @@ class NERClassifier(nn.Module):
     def forward(self, x, padding_mask):
         """Performs forward pass of the module."""
         # Get token embeddings for each word in a sequence
+        print('x1: ', x.shape)
         x = self.embedding_layer(x) * math.sqrt(self.d_model)
-
+        print('x2: ', x.shape)
         # Map input tokens to the transformer embedding dim
         # x = self.entry_mapping(x)
         # x = F.leaky_relu(x)
         # Leverage the self-attention mechanism on the input sequence
         x = self.positional_encodings(x)
-        # x = x.permute(1, 0, 2)
+        print('x3: ', x.shape)
+        x = x.permute(1, 0, 2)
+        print('x4: ', x.shape)
         x = self.transformer_encoder(x, padding_mask)
-        # x = x.permute(1, 0, 2)
+        x = x.permute(1, 0, 2)
 
         y_pred = self.classifier(x)
         return y_pred

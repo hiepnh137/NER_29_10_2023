@@ -69,7 +69,7 @@ class NERClassifier(nn.Module):
         )
 
         self.transformer_encoder = TransformerEncoder(
-            TransformerEncoderLayer(transformer_embedding_dim, attention_heads, ff_dim, dropout),
+            TransformerEncoderLayer(transformer_embedding_dim, attention_heads, ff_dim, dropout, batch_first=False),
             num_of_transformer_layers,
         )
         self.classifier = nn.Linear(transformer_embedding_dim, num_classes)
@@ -90,9 +90,10 @@ class NERClassifier(nn.Module):
         # x = self.entry_mapping(x)
         # x = F.leaky_relu(x)
         # Leverage the self-attention mechanism on the input sequence
-        x = self.positional_encodings(x)
         print('x3: ', x.shape)
         x = x.permute(1, 0, 2)
+        x = self.positional_encodings(x)
+        
         print('x4: ', x.shape)
         x = self.transformer_encoder(x, padding_mask)
         x = x.permute(1, 0, 2)

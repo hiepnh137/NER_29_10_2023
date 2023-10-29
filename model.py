@@ -63,9 +63,9 @@ class NERClassifier(nn.Module):
 
         # self.entry_mapping = nn.Linear(embedding_dim, transformer_embedding_dim)
         self.positional_encodings = PositionalEncoding(
-            config["max_len"],
             transformer_embedding_dim,
-            dropout
+            dropout,
+            config["max_len"]
         )
 
         self.transformer_encoder = TransformerEncoder(

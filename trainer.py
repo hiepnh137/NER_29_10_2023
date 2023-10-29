@@ -78,7 +78,7 @@ def evaluate_model(model, dataloader, device, mode, step, class_mapping=None):
                       f1_non_O, step)
 
     print(classification_report(y_true_accumulator, y_pred_accumulator, digits=4))
-
+    return f1_total
 
 def train_loop(config, device):
     """Implements training of the model.
@@ -137,6 +137,7 @@ def train_loop(config, device):
 
     train_step = 0
     start_time = time.strftime("%b-%d_%H-%M-%S")
+    max_f1 = -1e+5
     for epoch in tqdm(range(train_config["num_of_epochs"])):
         print("Epoch:", epoch)
         model.train()
@@ -172,9 +173,10 @@ def train_loop(config, device):
             model.eval()
             evaluate_model(model, train_loader, device,
                            "Train", epoch, reverse_class_mapping)
-            evaluate_model(model, valid_loader, device,
+            f1 = evaluate_model(model, valid_loader, device,
                            "Validation", epoch, reverse_class_mapping)
             model.train()
-
-        save_checkpoint(model, start_time, epoch)
-        print()
+        if f1 > max_f1:
+            save_checkpoint(model, start_time, epoch)
+            max_f1 = f1
+        

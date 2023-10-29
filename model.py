@@ -32,9 +32,11 @@ class TokenEmbedding(nn.Module):
     super(TokenEmbedding, self).__init__()
     self.weight = nn.Parameter(torch.zeros((vocab_size, embed_dim), dtype=torch.float32))
     nn.init.uniform_(self.weight, -0.10, +0.10)
+    self.vocab_size = vocab_size
     # T.nn.init.normal_(self.weight)  # mean = 0, stddev = 1
 
   def forward(self, x):
+    x = torch.nn.functional.one_hot(x, num_classes=self.vocab_size)
     return self.weight[x]
 
 class NERClassifier(nn.Module):
@@ -83,18 +85,14 @@ class NERClassifier(nn.Module):
     def forward(self, x, padding_mask):
         """Performs forward pass of the module."""
         # Get token embeddings for each word in a sequence
-        print('x1: ', x.shape)
         x = self.embedding_layer(x) * math.sqrt(self.d_model)
-        print('x2: ', x.shape)
         # Map input tokens to the transformer embedding dim
         # x = self.entry_mapping(x)
         # x = F.leaky_relu(x)
         # Leverage the self-attention mechanism on the input sequence
-        print('x3: ', x.shape)
         x = x.permute(1, 0, 2)
         x = self.positional_encodings(x)
         
-        print('x4: ', x.shape)
         x = self.transformer_encoder(x, padding_mask)
         x = x.permute(1, 0, 2)
 

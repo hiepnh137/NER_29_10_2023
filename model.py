@@ -61,7 +61,8 @@ class NERClassifier(nn.Module):
         #     freeze=True,
         #     padding_idx=config["PAD_idx"]
         # )
-        self.embedding_layer = TokenEmbedding(vocab_size, transformer_embedding_dim)
+        # self.embedding_layer = TokenEmbedding(vocab_size, transformer_embedding_dim)
+        self.embedding_layer = nn.Embedding(vocab_size, transformer_embedding_dim)
 
         # self.entry_mapping = nn.Linear(embedding_dim, transformer_embedding_dim)
         self.positional_encodings = PositionalEncoding(

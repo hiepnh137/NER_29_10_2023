@@ -87,13 +87,14 @@ class NERClassifier(nn.Module):
         """Performs forward pass of the module."""
         # Get token embeddings for each word in a sequence
         x = self.embedding_layer(x) * math.sqrt(self.d_model)
+        print('x: ', x.shape)
         # Map input tokens to the transformer embedding dim
         # x = self.entry_mapping(x)
         # x = F.leaky_relu(x)
         # Leverage the self-attention mechanism on the input sequence
         x = x.permute(1, 0, 2)
         x = self.positional_encodings(x)
-        
+        print('x2: ', x.shape)
         x = self.transformer_encoder(x, padding_mask)
         x = x.permute(1, 0, 2)
 

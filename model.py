@@ -62,7 +62,7 @@ class NERClassifier(nn.Module):
         self.embedding_layer = TokenEmbedding(ntoken, transformer_embedding_dim)
 
         # self.entry_mapping = nn.Linear(embedding_dim, transformer_embedding_dim)
-        self.positional_encodings = PositionalEncodings(
+        self.positional_encodings = PositionalEncoding(
             config["max_len"],
             transformer_embedding_dim,
             dropout

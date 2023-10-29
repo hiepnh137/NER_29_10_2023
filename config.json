@@ -46,7 +46,7 @@
     "transformer_ff_dim": 128,
     "attention_heads": 8,
     "dropout": 0.5,
-    "ntoken": 300000,
+    "ntoken": 128,
 
     "train_config": {
         "num_of_epochs": 50,

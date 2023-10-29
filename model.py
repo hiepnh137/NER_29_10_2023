@@ -92,6 +92,8 @@ class NERClassifier(nn.Module):
         # x = self.entry_mapping(x)
         # x = F.leaky_relu(x)
         # Leverage the self-attention mechanism on the input sequence
+        print('padding_mask: ', padding_mask.shape)
+        padding_mask = padding_mask.permute(1,0)
         x = x.permute(1, 0, 2)
         x = self.positional_encodings(x)
         print('x2: ', x.shape)

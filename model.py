@@ -72,7 +72,7 @@ class NERClassifier(nn.Module):
         )
 
         self.transformer_encoder = TransformerEncoder(
-            TransformerEncoderLayer(transformer_embedding_dim, attention_heads, ff_dim, dropout),
+            TransformerEncoderLayer(transformer_embedding_dim, attention_heads, ff_dim, dropout, batch_first=True),
             num_of_transformer_layers,
         )
         self.classifier = nn.Linear(transformer_embedding_dim, num_classes)
@@ -93,3 +93,5 @@ class NERClassifier(nn.Module):
 
         y_pred = self.classifier(x)
         return y_pred
+    
+

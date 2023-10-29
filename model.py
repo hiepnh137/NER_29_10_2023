@@ -52,7 +52,7 @@ class NERClassifier(nn.Module):
         attention_heads = config["attention_heads"]
         ff_dim = config["transformer_ff_dim"]
         dropout = config["dropout"]
-        ntoken = config["ntoken"]
+        vocab_size = config["vocab_size"]
         self.d_model = transformer_embedding_dim
         # Load pretrained word embeddings
         # word_embeddings = torch.Tensor(np.loadtxt(config["embeddings"]["path"]))
@@ -61,7 +61,7 @@ class NERClassifier(nn.Module):
         #     freeze=True,
         #     padding_idx=config["PAD_idx"]
         # )
-        self.embedding_layer = TokenEmbedding(ntoken, transformer_embedding_dim)
+        self.embedding_layer = TokenEmbedding(vocab_size, transformer_embedding_dim)
 
         # self.entry_mapping = nn.Linear(embedding_dim, transformer_embedding_dim)
         self.positional_encodings = PositionalEncoding(

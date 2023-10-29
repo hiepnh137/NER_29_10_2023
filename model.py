@@ -87,9 +87,9 @@ class NERClassifier(nn.Module):
         # x = F.leaky_relu(x)
         # Leverage the self-attention mechanism on the input sequence
         x = self.positional_encodings(x)
-        x = x.permute(1, 0, 2)
+        # x = x.permute(1, 0, 2)
         x = self.transformer_encoder(x, padding_mask)
-        x = x.permute(1, 0, 2)
+        # x = x.permute(1, 0, 2)
 
         y_pred = self.classifier(x)
         return y_pred

@@ -28,6 +28,7 @@ def evaluate_model(model, dataloader, device, mode, step, class_mapping=None):
     print("Started model evaluation.")
     for x, y, padding_mask in dataloader:
         x, y = x.to(device), y.to(device)
+        print('x: ', x.shape)
         padding_mask = padding_mask.to(device)
         y_pred = model(x, padding_mask)
 

@@ -114,9 +114,9 @@ def final_evaluate_model(model, dataloader, device, mode, class_mapping=None):
 
         # Map the integer labels back to NER tags
         y_pred = [class_mapping[str(pred)] for pred in y_pred]
-        y_true = [class_mapping[str(pred)] for pred in y_true]
+        y_true = [class_mapping[str(pred)] for pred in y]
 
-        y_true_list.append(y)
+        y_true_list.append(y_true)
         y_pred_list.append(y_pred)
 
     precision, recall, f1 = evaluate(

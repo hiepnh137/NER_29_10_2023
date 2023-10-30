@@ -109,15 +109,17 @@ def final_evaluate_model(model, dataloader, device, mode, class_mapping=None):
         y = y[unpadded_mask]
 
         y_pred = y_pred.argmax(dim=1)
-        y_pred = y_pred.view(-1).detach().cpu().tolist()
-        y = y.view(-1).detach().cpu().tolist()
-
+        # y_pred = y_pred.view(-1).detach().cpu().tolist()
+        # y = y.view(-1).detach().cpu().tolist()
+        y_pred = [[class_mapping[t] for t in s] for s in y_pred]
+        
+        y_true = [[class_mapping[t] for t in s] for s in y_pred]
         # Map the integer labels back to NER tags
-        y_pred = [class_mapping[str(pred)] for pred in y_pred]
-        y_true = [class_mapping[str(pred)] for pred in y]
+        # y_pred = [class_mapping[str(pred)] for pred in y_pred]
+        # y_true = [class_mapping[str(pred)] for pred in y]
 
-        y_true_list.append(y_true)
-        y_pred_list.append(y_pred)
+        y_true_list.extend(y_true)
+        y_pred_list.extend(y_pred)
 
     precision, recall, f1 = evaluate(
         itertools.chain(*y_true_list),
@@ -231,6 +233,6 @@ def train_loop(config, device):
     precision, recall, f1, y_true_list, y_pred_list = final_evaluate_model(model, valid_loader, device,
                            "Validation", reverse_class_mapping)
     print(f'precision={precision}, recall={recall}, f1={f1}')
-    with open(f'checkpoints/{model_ckp}/prediction.json', 'w') as f:
+    with open(f'checkpoints/prediction_{epoch}.json', 'w') as f:
         f.write(json.dumps({'predict': y_pred_list,
                             'true_label': y_true_list}))

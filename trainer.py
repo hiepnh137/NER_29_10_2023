@@ -1,5 +1,4 @@
 import time
-
 import numpy as np
 import torch
 import torch.nn.functional as F
@@ -82,7 +81,7 @@ def evaluate_model(model, dataloader, device, mode, step, class_mapping=None):
                       f1_non_O, step)
 
     print(classification_report(y_true_accumulator, y_pred_accumulator, digits=4))
-    return f1_total
+    return f1_non_O
 
 def final_evaluate_model(model, dataloader, device, mode, class_mapping=None):
     """Evaluates the model performance."""
@@ -94,8 +93,8 @@ def final_evaluate_model(model, dataloader, device, mode, class_mapping=None):
     if class_mapping is None:
         raise ValueError("Argument @class_mapping not provided!")
 
-    y_true_list = []
-    y_pred_list = []
+    y_true_accumulator = []
+    y_pred_accumulator = []
 
     print("Started model evaluation.")
     for x, y, padding_mask in dataloader:
@@ -112,18 +111,19 @@ def final_evaluate_model(model, dataloader, device, mode, class_mapping=None):
         y_pred = y_pred.view(-1).detach().cpu().tolist()
         y = y.view(-1).detach().cpu().tolist()
 
-        # Map the integer labels back to NER tags
-        y_pred = [class_mapping[str(pred)] for pred in y_pred]
-        y_true = [class_mapping[str(pred)] for pred in y]
+        y_true_accumulator += y
+        y_pred_accumulator += y_pred
 
-        y_true_list.append(y_true)
-        y_pred_list.append(y_pred)
+    # Map the integer labels back to NER tags
+    y_pred_accumulator = [class_mapping[str(pred)] for pred in y_pred_accumulator]
+    y_true_accumulator = [class_mapping[str(pred)] for pred in y_true_accumulator]
 
-    precision, recall, f1 = evaluate(
-        itertools.chain(*y_true_list),
-        itertools.chain(*y_pred_list)
-        )
-    return precision, recall, f1, y_true_list, y_pred_list
+    # y_pred_accumulator = np.array(y_pred_accumulator)
+    # y_true_accumulator = np.array(y_true_accumulator)
+
+
+    precision, recall, f1 = evaluate(y_true_accumulator, y_pred_accumulator)
+    return precision, recall, f1, y_true_accumulator, y_pred_accumulator
 
 def train_loop(config, device):
     """Implements training of the model.
@@ -231,6 +231,6 @@ def train_loop(config, device):
     precision, recall, f1, y_true_list, y_pred_list = final_evaluate_model(model, valid_loader, device,
                            "Validation", reverse_class_mapping)
     print(f'precision={precision}, recall={recall}, f1={f1}')
-    with open(f'checkpoints/{model_ckp}/prediction.json', 'w') as f:
+    with open(f'checkpoints/prediction_{epoch}.json', 'w') as f:
         f.write(json.dumps({'predict': y_pred_list,
                             'true_label': y_true_list}))

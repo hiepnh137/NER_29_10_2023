@@ -107,21 +107,32 @@ def final_evaluate_model(model, dataloader, device, mode, class_mapping=None):
         unpadded_mask = torch.logical_not(padding_mask)
         y_pred = y_pred[unpadded_mask]
         y = y[unpadded_mask]
-
         y_pred = y_pred.argmax(dim=1)
-        print('y_pred: ', y_pred.shape)
-        print('y: ', y.shape)
+        
+        for i in range(len(padding_mask)):
+            predictions = []
+            labels = []
+            for j in range(len(padding_mask[j])):
+                if padding_mask[j] == 0:
+                    predictions.append(class_mapping[y_pred[i][j]])
+                    labels.append(class_mapping[y[i][j]])
+                else:
+                    break
+            y_true_list.append(labels)
+            y_pred_list.append(predictions)
+        
+        # print('y_pred: ', y_pred.shape)
+        # print('y: ', y.shape)
         # y_pred = y_pred.view(-1).detach().cpu().tolist()
         # y = y.view(-1).detach().cpu().tolist()
-        y_pred = [[class_mapping[t] for t in s] for s in y_pred]
+        # y_pred = [[class_mapping[t] for t in s] for s in y_pred]
         
-        y_true = [[class_mapping[t] for t in s] for s in y_pred]
+        # y_true = [[class_mapping[t] for t in s] for s in y_pred]
         # Map the integer labels back to NER tags
         # y_pred = [class_mapping[str(pred)] for pred in y_pred]
         # y_true = [class_mapping[str(pred)] for pred in y]
 
-        y_true_list.extend(y_true)
-        y_pred_list.extend(y_pred)
+        
 
     precision, recall, f1 = evaluate(
         itertools.chain(*y_true_list),

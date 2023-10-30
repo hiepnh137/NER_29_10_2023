@@ -109,6 +109,8 @@ def final_evaluate_model(model, dataloader, device, mode, class_mapping=None):
         y = y[unpadded_mask]
 
         y_pred = y_pred.argmax(dim=1)
+        print('y_pred: ', y_pred.shape)
+        print('y: ', y.shape)
         # y_pred = y_pred.view(-1).detach().cpu().tolist()
         # y = y.view(-1).detach().cpu().tolist()
         y_pred = [[class_mapping[t] for t in s] for s in y_pred]

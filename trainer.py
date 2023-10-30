@@ -113,7 +113,7 @@ def final_evaluate_model(model, dataloader, device, mode, class_mapping=None):
             predictions = []
             labels = []
             for j in range(len(padding_mask[i])):
-                if padding_mask[j] == False:
+                if padding_mask[i][j] == False:
                     predictions.append(class_mapping[y_pred[i][j]])
                     labels.append(class_mapping[y[i][j]])
                 else:

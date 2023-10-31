@@ -8,7 +8,7 @@ from sklearn.metrics import accuracy_score, f1_score, classification_report
 import datasets 
 import json
 from dataloader import CoNLLDataset
-from model import NERClassifier
+from model import NERClassifier, NERLSTM
 from utils import save_checkpoint, log_gradient_norm
 from tqdm import tqdm
 
@@ -94,8 +94,8 @@ def final_evaluate_model(model, dataloader, device, mode, class_mapping=None):
     if class_mapping is None:
         raise ValueError("Argument @class_mapping not provided!")
 
-    y_true_list = []
-    y_pred_list = []
+    y_true_accumulator = []
+    y_pred_accumulator = []
 
     print("Started model evaluation.")
     for x, y, padding_mask in dataloader:
@@ -107,38 +107,38 @@ def final_evaluate_model(model, dataloader, device, mode, class_mapping=None):
         unpadded_mask = torch.logical_not(padding_mask)
         y_pred = y_pred[unpadded_mask]
         y = y[unpadded_mask]
+
         y_pred = y_pred.argmax(dim=1)
-        
-        for i in range(len(padding_mask)):
-            predictions = []
-            labels = []
-            for j in range(len(padding_mask[i])):
-                if padding_mask[i][j] == False:
-                    predictions.append(class_mapping[y_pred[i][j]])
-                    labels.append(class_mapping[y[i][j]])
-                else:
-                    break
-            y_true_list.append(labels)
-            y_pred_list.append(predictions)
-        
-        # print('y_pred: ', y_pred.shape)
-        # print('y: ', y.shape)
-        # y_pred = y_pred.view(-1).detach().cpu().tolist()
-        # y = y.view(-1).detach().cpu().tolist()
-        # y_pred = [[class_mapping[t] for t in s] for s in y_pred]
-        
-        # y_true = [[class_mapping[t] for t in s] for s in y_pred]
-        # Map the integer labels back to NER tags
-        # y_pred = [class_mapping[str(pred)] for pred in y_pred]
-        # y_true = [class_mapping[str(pred)] for pred in y]
+        y_pred = y_pred.view(-1).detach().cpu().tolist()
+        y = y.view(-1).detach().cpu().tolist()
+
+        y_true_accumulator += y
+        y_pred_accumulator += y_pred
+
+    # Map the integer labels back to NER tags
+    y_pred_accumulator = [class_mapping[str(pred)] for pred in y_pred_accumulator]
+    y_true_accumulator = [class_mapping[str(pred)] for pred in y_true_accumulator]
 
         
 
     precision, recall, f1 = evaluate(
-        itertools.chain(*y_true_list),
-        itertools.chain(*y_pred_list)
+        itertools.chain(y_true_accumulator),
+        itertools.chain(y_pred_accumulator)
         )
-    return precision, recall, f1, y_true_list, y_pred_list
+    return precision, recall, f1, y_true_accumulator, y_pred_accumulator
+
+def seed_everything(seed: int):
+    import random, os
+    import numpy as np
+    import torch
+    
+    random.seed(seed)
+    os.environ['PYTHONHASHSEED'] = str(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = True
 
 def train_loop(config, device):
     """Implements training of the model.
@@ -148,8 +148,7 @@ def train_loop(config, device):
         writer: tensorboardX writer object
         device: device on which to map the model and data
     """
-    torch.manual_seed(config["seed"])
-    np.random.seed(config["seed"])
+    seed_everything(config["seed"])
     reverse_class_mapping = {
         str(idx): cls_name for cls_name, idx in config["class_mapping"].items()
     }
@@ -173,7 +172,10 @@ def train_loop(config, device):
     valid_loader = DataLoader(valid_set, **valid_hyperparams)
 
     # Instantiate the model
-    model = NERClassifier(config)
+    if config['model_type'] == 'Transformer':
+        model = NERClassifier(config)
+    elif config['model_type'] == 'LSTM':
+        model = NERLSTM(config)
     model = model.to(device)
 
     # Load training configuration
@@ -232,10 +234,12 @@ def train_loop(config, device):
         print(f'Epoch {epoch}, Loss: {avg_loss}')
         with torch.no_grad():
             model.eval()
-            evaluate_model(model, train_loader, device,
-                           "Train", epoch, reverse_class_mapping)
-            f1 = evaluate_model(model, valid_loader, device,
-                           "Validation", epoch, reverse_class_mapping)
+            # evaluate_model(model, train_loader, device,
+            #                "Train", epoch, reverse_class_mapping)
+            # f1 = evaluate_model(model, valid_loader, device,
+            #                "Validation", epoch, reverse_class_mapping)
+            precision, recall, f1, y_true_list, y_pred_list = final_evaluate_model(model, valid_loader, device,
+                           "Validation", reverse_class_mapping)
             model.train()
         if f1 > max_f1:
             save_checkpoint(model, start_time, epoch)
@@ -243,8 +247,22 @@ def train_loop(config, device):
             model_ckp = f'{start_time}/model_{epoch}.pth'
     ckp = torch.load(f'checkpoints/{model_ckp}')
     model.load_state_dict(ckp)
-    precision, recall, f1, y_true_list, y_pred_list = final_evaluate_model(model, valid_loader, device,
+    test_hyperparams = {
+        "batch_size": config["batch_size"]["validation"],
+        "shuffle": False,
+        "drop_last": True
+        }
+
+    # Create dataloaders
+    test_set = CoNLLDataset(config, dataset["test"])
+    test_loader = DataLoader(test_set, **test_hyperparams)
+
+    precision, recall, f1, y_true_list, y_pred_list = final_evaluate_model(model, test_loader, device,
                            "Validation", reverse_class_mapping)
+    
+    print('FINAL EVALUATION: ')
+    print('dev_f1: ', max_f1)
+    print('test_f1: ', f1)
     print(f'precision={precision}, recall={recall}, f1={f1}')
     with open(f'checkpoints/prediction_{epoch}.json', 'w') as f:
         f.write(json.dumps({'predict': y_pred_list,

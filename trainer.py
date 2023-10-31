@@ -1,4 +1,5 @@
 import time
+
 import numpy as np
 import torch
 import torch.nn.functional as F
@@ -81,7 +82,7 @@ def evaluate_model(model, dataloader, device, mode, step, class_mapping=None):
                       f1_non_O, step)
 
     print(classification_report(y_true_accumulator, y_pred_accumulator, digits=4))
-    return f1_non_O
+    return f1_total
 
 def final_evaluate_model(model, dataloader, device, mode, class_mapping=None):
     """Evaluates the model performance."""
@@ -93,8 +94,8 @@ def final_evaluate_model(model, dataloader, device, mode, class_mapping=None):
     if class_mapping is None:
         raise ValueError("Argument @class_mapping not provided!")
 
-    y_true_accumulator = []
-    y_pred_accumulator = []
+    y_true_list = []
+    y_pred_list = []
 
     print("Started model evaluation.")
     for x, y, padding_mask in dataloader:
@@ -106,24 +107,38 @@ def final_evaluate_model(model, dataloader, device, mode, class_mapping=None):
         unpadded_mask = torch.logical_not(padding_mask)
         y_pred = y_pred[unpadded_mask]
         y = y[unpadded_mask]
-
         y_pred = y_pred.argmax(dim=1)
-        y_pred = y_pred.view(-1).detach().cpu().tolist()
-        y = y.view(-1).detach().cpu().tolist()
+        
+        for i in range(len(padding_mask)):
+            predictions = []
+            labels = []
+            for j in range(len(padding_mask[i])):
+                if padding_mask[i][j] == False:
+                    predictions.append(class_mapping[y_pred[i][j]])
+                    labels.append(class_mapping[y[i][j]])
+                else:
+                    break
+            y_true_list.append(labels)
+            y_pred_list.append(predictions)
+        
+        # print('y_pred: ', y_pred.shape)
+        # print('y: ', y.shape)
+        # y_pred = y_pred.view(-1).detach().cpu().tolist()
+        # y = y.view(-1).detach().cpu().tolist()
+        # y_pred = [[class_mapping[t] for t in s] for s in y_pred]
+        
+        # y_true = [[class_mapping[t] for t in s] for s in y_pred]
+        # Map the integer labels back to NER tags
+        # y_pred = [class_mapping[str(pred)] for pred in y_pred]
+        # y_true = [class_mapping[str(pred)] for pred in y]
 
-        y_true_accumulator += y
-        y_pred_accumulator += y_pred
+        
 
-    # Map the integer labels back to NER tags
-    y_pred_accumulator = [class_mapping[str(pred)] for pred in y_pred_accumulator]
-    y_true_accumulator = [class_mapping[str(pred)] for pred in y_true_accumulator]
-
-    # y_pred_accumulator = np.array(y_pred_accumulator)
-    # y_true_accumulator = np.array(y_true_accumulator)
-
-
-    precision, recall, f1 = evaluate(y_true_accumulator, y_pred_accumulator)
-    return precision, recall, f1, y_true_accumulator, y_pred_accumulator
+    precision, recall, f1 = evaluate(
+        itertools.chain(*y_true_list),
+        itertools.chain(*y_pred_list)
+        )
+    return precision, recall, f1, y_true_list, y_pred_list
 
 def train_loop(config, device):
     """Implements training of the model.
